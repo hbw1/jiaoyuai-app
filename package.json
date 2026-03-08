@@ -1,0 +1,21 @@
+{
+  "name": "aijiaoyu-app",
+  "version": "1.0.0",
+  "description": "AI教育应用 - 智能试卷分析与个性化学习方案",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "mobile": "cd mobile && npm start",
+    "dev": "concurrently \"npm run backend\" \"npm run mobile\"",
+    "install:all": "cd backend && npm install && cd ../mobile && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "author": "",
+  "license": "MIT"
+}
