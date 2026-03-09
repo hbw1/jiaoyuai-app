@@ -28,9 +28,9 @@ export const useExamStore = create<ExamState>((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await examApi.getList(params);
       
-      if (response.status === 'success' && response.data) {
+      if (response.data.status === 'success' && response.data.data) {
         set({
-          exams: response.data.exams as Exam[],
+          exams: response.data.data.exams as Exam[],
           isLoading: false
         });
       }
@@ -47,9 +47,9 @@ export const useExamStore = create<ExamState>((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await examApi.getById(id);
       
-      if (response.status === 'success' && response.data) {
+      if (response.data.status === 'success' && response.data.data) {
         set({
-          currentExam: response.data.exam as Exam,
+          currentExam: response.data.data.exam as Exam,
           isLoading: false
         });
       }
@@ -66,8 +66,8 @@ export const useExamStore = create<ExamState>((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await examApi.upload(formData);
       
-      if (response.status === 'success' && response.data) {
-        const newExam = response.data.exam as Exam;
+      if (response.data.status === 'success' && response.data.data) {
+        const newExam = response.data.data.exam as Exam;
         set((state) => ({
           exams: [newExam, ...state.exams],
           currentExam: newExam,
@@ -109,13 +109,13 @@ export const useExamStore = create<ExamState>((set, get) => ({
       set({ isLoading: true, error: null });
       const response = await analysisApi.analyze(examId);
       
-      if (response.status === 'success' && response.data) {
+      if (response.data.status === 'success' && response.data.data) {
         const currentExam = get().currentExam;
         if (!currentExam) return;
         
         const updatedExam: Exam = {
           ...currentExam,
-          analysisResult: response.data.analysisResult,
+          analysisResult: response.data.data.analysisResult,
           status: 'analyzed'
         };
         

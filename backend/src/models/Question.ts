@@ -28,8 +28,7 @@ export class Question {
   content: string;
 
   @Column({
-    type: 'enum',
-    enum: QuestionType,
+    type: 'varchar',
     default: QuestionType.CHOICE
   })
   type: QuestionType;

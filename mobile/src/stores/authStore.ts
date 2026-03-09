@@ -33,20 +33,25 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           const response = await authApi.login({ email, password });
           
-          if (response.status === 'success' && response.data) {
-            await AsyncStorage.setItem('token', response.data.token);
+          console.log('Login response:', JSON.stringify(response.data));
+          
+          if (response.data.status === 'success' && response.data.data) {
+            await AsyncStorage.setItem('token', response.data.data.token);
             set({
-              user: response.data.user as User,
-              token: response.data.token,
+              user: response.data.data.user as User,
+              token: response.data.data.token,
               isAuthenticated: true,
               isLoading: false
             });
+          } else {
+            console.log('Login failed: unexpected response format');
+            set({ isLoading: false, error: '登录失败：服务器响应格式错误' });
+            throw new Error('登录失败：服务器响应格式错误');
           }
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || '登录失败',
-            isLoading: false
-          });
+          console.log('Login error:', error.message);
+          const errorMessage = error.response?.data?.message || error.message || '登录失败';
+          set({ error: errorMessage, isLoading: false });
           throw error;
         }
       },
@@ -56,20 +61,25 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           const response = await authApi.register({ name, email, password, grade });
           
-          if (response.status === 'success' && response.data) {
-            await AsyncStorage.setItem('token', response.data.token);
+          console.log('Register response:', JSON.stringify(response.data));
+          
+          if (response.data.status === 'success' && response.data.data) {
+            await AsyncStorage.setItem('token', response.data.data.token);
             set({
-              user: response.data.user as User,
-              token: response.data.token,
+              user: response.data.data.user as User,
+              token: response.data.data.token,
               isAuthenticated: true,
               isLoading: false
             });
+          } else {
+            console.log('Register failed: unexpected response format');
+            set({ isLoading: false, error: '注册失败：服务器响应格式错误' });
+            throw new Error('注册失败：服务器响应格式错误');
           }
         } catch (error: any) {
-          set({
-            error: error.response?.data?.message || '注册失败',
-            isLoading: false
-          });
+          console.log('Register error:', error.message);
+          const errorMessage = error.response?.data?.message || error.message || '注册失败';
+          set({ error: errorMessage, isLoading: false });
           throw error;
         }
       },
@@ -88,9 +98,9 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true });
           const response = await authApi.getProfile();
           
-          if (response.status === 'success' && response.data) {
+          if (response.data.status === 'success' && response.data.data) {
             set({
-              user: response.data.user as User,
+              user: response.data.data.user as User,
               isAuthenticated: true,
               isLoading: false
             });
@@ -105,9 +115,9 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true, error: null });
           const response = await authApi.updateProfile(data);
           
-          if (response.status === 'success' && response.data) {
+          if (response.data.status === 'success' && response.data.data) {
             set({
-              user: response.data.user as User,
+              user: response.data.data.user as User,
               isLoading: false
             });
           }

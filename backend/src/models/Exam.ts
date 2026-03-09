@@ -29,8 +29,7 @@ export class Exam {
   grade: number;
 
   @Column({
-    type: 'enum',
-    enum: ExamType,
+    type: 'varchar',
     default: ExamType.PRACTICE
   })
   examType: ExamType;
