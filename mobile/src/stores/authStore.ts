@@ -32,24 +32,23 @@ export const useAuthStore = create<AuthState>()(
         try {
           set({ isLoading: true, error: null });
           const response = await authApi.login({ email, password });
+          console.log('Response structure:', JSON.stringify(response));
+          console.log('response.data:', JSON.stringify(response?.data));
           
-          console.log('Login response:', JSON.stringify(response.data));
-          
-          if (response.data.status === 'success' && response.data.data) {
-            await AsyncStorage.setItem('token', response.data.data.token);
+          const data = response?.data;
+          if (data?.status === 'success' && data?.data) {
+            await AsyncStorage.setItem('token', data.data.token);
             set({
-              user: response.data.data.user as User,
-              token: response.data.data.token,
+              user: data.data.user as User,
+              token: data.data.token,
               isAuthenticated: true,
               isLoading: false
             });
           } else {
-            console.log('Login failed: unexpected response format');
             set({ isLoading: false, error: '登录失败：服务器响应格式错误' });
             throw new Error('登录失败：服务器响应格式错误');
           }
         } catch (error: any) {
-          console.log('Login error:', error.message);
           const errorMessage = error.response?.data?.message || error.message || '登录失败';
           set({ error: errorMessage, isLoading: false });
           throw error;

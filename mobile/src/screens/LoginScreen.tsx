@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Pressable } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../stores/authStore';
 import { COLORS } from '../constants';
@@ -41,9 +41,19 @@ export default function LoginScreen({ navigation }: Props) {
     }
 
     try {
-      await login(email, password);
+      const response = await fetch('http://localhost:3000/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await response.json();
+      Alert.alert('测试', '状态: ' + response.status + '\n数据: ' + JSON.stringify(data));
+      
+      if (data.status === 'success' && data.data) {
+        await login(email, password);
+      }
     } catch (err) {
-      // Error is handled in the store and shown via useEffect
+      Alert.alert('登录失败', (err as Error).message);
     }
   };
 
@@ -70,9 +80,12 @@ export default function LoginScreen({ navigation }: Props) {
           secureTextEntry
         />
 
-        <TouchableOpacity
+        <Pressable
           style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={() => {
+            console.log('Button pressed');
+            handleLogin();
+          }}
           disabled={isLoading}
         >
           {isLoading ? (
@@ -80,7 +93,7 @@ export default function LoginScreen({ navigation }: Props) {
           ) : (
             <Text style={styles.buttonText}>登录</Text>
           )}
-        </TouchableOpacity>
+        </Pressable>
 
         <TouchableOpacity
           style={styles.linkButton}

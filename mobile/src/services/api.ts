@@ -43,9 +43,9 @@ class ApiService {
     return response.data;
   }
 
-  async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async post<T>(url: string, data?: any): Promise<any> {
     const response = await this.api.post(url, data);
-    return response.data;
+    return response;
   }
 
   async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {

@@ -24,19 +24,19 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+const fileFilter = (req: Request, file: any, cb: multer.FileFilterCallback) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
   
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('只支持 JPEG, PNG, JPG, WEBP 格式的图片'));
+    cb(new Error('只支持 JPEG, PNG, WEBP 格式的图片'));
   }
 };
 
 export const uploadMiddleware = multer({
   storage,
-  fileFilter,
+  fileFilter: fileFilter as any,
   limits: {
     fileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760'),
     files: 10

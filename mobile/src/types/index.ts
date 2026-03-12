@@ -2,11 +2,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  grade: number;
-  subjects: string[];
-  learningGoals: LearningGoal[];
-  role: 'student' | 'teacher' | 'parent';
-  createdAt: string;
+  grade?: number;
+  subjects?: string[];
+  learningGoals?: LearningGoal[];
+  role?: 'student' | 'teacher' | 'parent';
+  createdAt?: string;
 }
 
 export interface LearningGoal {

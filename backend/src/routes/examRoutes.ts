@@ -6,7 +6,7 @@ import { uploadMiddleware } from '../middleware/upload';
 const router = Router();
 const examController = new ExamController();
 
-router.post('/upload', authMiddleware, uploadMiddleware.array('images', 10), examController.uploadExam);
+router.post('/upload', authMiddleware, uploadMiddleware.array('images', 10) as any, examController.uploadExam);
 router.get('/', authMiddleware, examController.getExams);
 router.get('/:id', authMiddleware, examController.getExamById);
 router.delete('/:id', authMiddleware, examController.deleteExam);
