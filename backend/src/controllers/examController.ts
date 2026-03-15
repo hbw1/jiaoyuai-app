@@ -16,7 +16,21 @@ export class ExamController {
         throw new HttpError(400, '请上传试卷图片');
       }
 
-      const imageUrls = files.map(file => file.path);
+      // Convert absolute paths to relative URLs
+      const imageUrls = files.map(file => {
+        // file.path is absolute path, we need relative path from project root
+        // or relative from uploads directory if serving static files
+        // Assuming file.path is like /.../backend/uploads/2023-10-27/uuid.jpg
+        // We want uploads/2023-10-27/uuid.jpg
+        
+        // Find 'uploads' in the path and get everything after it including 'uploads'
+        const parts = file.path.split('uploads');
+        if (parts.length > 1) {
+            // parts[1] starts with / or \ depending on OS
+            return `uploads${parts[1]}`.replace(/\\/g, '/');
+        }
+        return file.path;
+      });
 
       const exam = this.examRepository.create({
         userId: user.id,
@@ -32,21 +46,14 @@ export class ExamController {
 
       res.status(201).json({
         status: 'success',
-        data: {
-          exam: {
-            id: exam.id,
-            subject: exam.subject,
-            grade: exam.grade,
-            examType: exam.examType,
-            title: exam.title,
-            images: exam.images,
-            status: exam.status,
-            createdAt: exam.createdAt
-          }
-        }
+        data: { exam }
       });
     } catch (error) {
-      throw error;
+      console.error('Upload error:', error);
+      res.status(500).json({
+        status: 'error',
+        message: error instanceof Error ? error.message : '上传失败'
+      });
     }
   };
 
@@ -99,7 +106,7 @@ export class ExamController {
       throw new HttpError(404, '试卷不存在');
     }
 
-    if (exam.userId !== user.id) {
+    if ((exam as any).userId !== user.id) {
       throw new HttpError(403, '无权访问此试卷');
     }
 
@@ -113,13 +120,16 @@ export class ExamController {
     const user = (req as any).user;
     const examId = req.params.id as string;
 
-    const exam = await this.examRepository.findOne({ where: { id: examId } });
+    const exam = await this.examRepository.findOne({
+      where: { id: examId },
+      relations: ['questions']
+    });
 
     if (!exam) {
       throw new HttpError(404, '试卷不存在');
     }
 
-    if (exam.userId !== user.id) {
+    if ((exam as any).userId !== user.id) {
       throw new HttpError(403, '无权删除此试卷');
     }
 

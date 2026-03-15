@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { Exam } from '../types';
+import { AnalysisResult, Exam } from '../types';
 import { examApi, analysisApi } from '../services/api';
 
 interface ExamState {
   exams: Exam[];
   currentExam: Exam | null;
   isLoading: boolean;
+  isUploading: boolean;
   error: string | null;
   
   fetchExams: (params?: { page?: number; limit?: number; subject?: string; status?: string }) => Promise<void>;
@@ -17,20 +18,38 @@ interface ExamState {
   clearError: () => void;
 }
 
+interface ExamsListResponseData {
+  exams: Exam[];
+}
+
+interface ExamDetailResponseData {
+  exam: Exam;
+}
+
+interface UploadExamResponseData {
+  exam: Exam;
+}
+
+interface AnalyzeExamResponseData {
+  examId: string;
+  analysisResult: AnalysisResult;
+}
+
 export const useExamStore = create<ExamState>((set, get) => ({
   exams: [],
   currentExam: null,
   isLoading: false,
+  isUploading: false,
   error: null,
 
   fetchExams: async (params) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await examApi.getList(params);
+      const response = await examApi.getList<ExamsListResponseData>(params);
       
-      if (response.data.status === 'success' && response.data.data) {
+      if (response.status === 'success' && response.data) {
         set({
-          exams: response.data.data.exams as Exam[],
+          exams: response.data.exams as Exam[],
           isLoading: false
         });
       }
@@ -45,11 +64,11 @@ export const useExamStore = create<ExamState>((set, get) => ({
   fetchExamById: async (id: string) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await examApi.getById(id);
+      const response = await examApi.getById<ExamDetailResponseData>(id);
       
-      if (response.data.status === 'success' && response.data.data) {
+      if (response.status === 'success' && response.data) {
         set({
-          currentExam: response.data.data.exam as Exam,
+          currentExam: response.data.exam as Exam,
           isLoading: false
         });
       }
@@ -63,25 +82,34 @@ export const useExamStore = create<ExamState>((set, get) => ({
 
   uploadExam: async (formData: FormData) => {
     try {
-      set({ isLoading: true, error: null });
-      const response = await examApi.upload(formData);
+      console.log('examStore: uploadExam called');
+      set({ isUploading: true, error: null });
+      console.log('examStore: sending request to backend...');
+      const response = await examApi.upload<UploadExamResponseData>(formData);
+      console.log('examStore: backend response received:', JSON.stringify(response, null, 2));
       
-      if (response.data.status === 'success' && response.data.data) {
-        const newExam = response.data.data.exam as Exam;
-        set((state) => ({
+      if (response && response.status === 'success' && response.data?.exam) {
+        const newExam = response.data.exam as Exam;
+        console.log('examStore: upload success, updating state...');
+        set((state: ExamState) => ({
           exams: [newExam, ...state.exams],
           currentExam: newExam,
-          isLoading: false
+          isUploading: false
         }));
         return newExam;
       }
-      throw new Error('上传失败');
+      
+      console.error('examStore: upload failed logic check:', response);
+      throw new Error(response?.message || '上传失败');
+      
     } catch (error: any) {
+      console.error('examStore: upload error caught:', error);
+      const errorMessage = error.response?.data?.message || error.message || '上传试卷失败';
       set({
-        error: error.response?.data?.message || '上传试卷失败',
-        isLoading: false
+        error: errorMessage,
+        isUploading: false
       });
-      throw error;
+      throw new Error(errorMessage);
     }
   },
 
@@ -90,8 +118,8 @@ export const useExamStore = create<ExamState>((set, get) => ({
       set({ isLoading: true, error: null });
       await examApi.delete(id);
       
-      set((state) => ({
-        exams: state.exams.filter((exam) => exam.id !== id),
+      set((state: ExamState) => ({
+        exams: state.exams.filter((exam: Exam) => exam.id !== id),
         currentExam: state.currentExam?.id === id ? null : state.currentExam,
         isLoading: false
       }));
@@ -107,21 +135,30 @@ export const useExamStore = create<ExamState>((set, get) => ({
   analyzeExam: async (examId: string) => {
     try {
       set({ isLoading: true, error: null });
-      const response = await analysisApi.analyze(examId);
+      const response = await analysisApi.analyze<AnalyzeExamResponseData>(examId);
       
-      if (response.data.status === 'success' && response.data.data) {
-        const currentExam = get().currentExam;
-        if (!currentExam) return;
+      if (response.status === 'success' && response.data) {
+        const state = get();
+        const baseExam =
+          state.currentExam?.id === examId
+            ? state.currentExam
+            : state.exams.find((exam: Exam) => exam.id === examId);
+
+        if (!baseExam) {
+          set({ isLoading: false });
+          return;
+        }
         
         const updatedExam: Exam = {
-          ...currentExam,
-          analysisResult: response.data.data.analysisResult,
-          status: 'analyzed'
+          ...baseExam,
+          analysisResult: response.data.analysisResult,
+          status: 'analyzed',
+          obtainedScore: response.data.analysisResult.overallScore
         };
         
-        set((state) => ({
-          currentExam: updatedExam,
-          exams: state.exams.map((exam) =>
+        set((state: ExamState) => ({
+          currentExam: state.currentExam?.id === examId ? updatedExam : state.currentExam,
+          exams: state.exams.map((exam: Exam) =>
             exam.id === examId ? updatedExam : exam
           ),
           isLoading: false

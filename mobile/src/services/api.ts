@@ -2,12 +2,13 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../constants';
 import { ApiResponse } from '../types';
+import { useAuthStore } from '../stores/authStore';
 
 class ApiService {
   private api: AxiosInstance;
 
   constructor() {
-    this.api = axios.create({
+    this.api = (axios as any).create({
       baseURL: API_URL,
       timeout: 30000,
       headers: {
@@ -30,8 +31,7 @@ class ApiService {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          await AsyncStorage.removeItem('token');
-          await AsyncStorage.removeItem('user');
+          await (useAuthStore as any).getState().resetAuth();
         }
         return Promise.reject(error);
       }
@@ -43,9 +43,9 @@ class ApiService {
     return response.data;
   }
 
-  async post<T>(url: string, data?: any): Promise<any> {
+  async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
     const response = await this.api.post(url, data);
-    return response;
+    return response.data;
   }
 
   async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
@@ -59,46 +59,69 @@ class ApiService {
   }
 
   async upload<T>(url: string, formData: FormData): Promise<ApiResponse<T>> {
-    const response = await this.api.post(url, formData, {
+    console.log('API upload called for url:', url);
+    const token = await AsyncStorage.getItem('token');
+    const response = await fetch(`${API_URL}${url}`, {
+      method: 'POST',
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        Accept: 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
     });
-    return response.data;
+
+    const data = await response.json();
+    console.log('API upload response received');
+
+    if (response.status === 401) {
+      await (useAuthStore as any).getState().resetAuth();
+    }
+
+    if (!response.ok) {
+      throw {
+        response: {
+          status: response.status,
+          data
+        },
+        message: data?.message || '上传失败'
+      };
+    }
+
+    return data as ApiResponse<T>;
   }
 }
 
 export const apiService = new ApiService();
 
 export const authApi = {
-  register: (data: { name: string; email: string; password: string; grade?: number }) =>
-    apiService.post('/users/register', data),
+  register: <T>(data: { name: string; email: string; password: string; grade?: number }) =>
+    apiService.post<T>('/users/register', data),
   
-  login: (data: { email: string; password: string }) =>
-    apiService.post('/users/login', data),
+  login: <T>(data: { email: string; password: string }) =>
+    apiService.post<T>('/users/login', data),
   
-  getProfile: () => apiService.get('/users/profile'),
+  getProfile: <T>() => apiService.get<T>('/users/profile'),
   
-  updateProfile: (data: any) => apiService.put('/users/profile', data)
+  updateProfile: <T>(data: any) => apiService.put<T>('/users/profile', data)
 };
 
 export const examApi = {
-  upload: (formData: FormData) => apiService.upload('/exams/upload', formData),
+  upload: <T>(formData: FormData) => apiService.upload<T>('/exams/upload', formData),
   
-  getList: (params?: { page?: number; limit?: number; subject?: string; status?: string }) =>
-    apiService.get('/exams', params),
+  getList: <T>(params?: { page?: number; limit?: number; subject?: string; status?: string }) =>
+    apiService.get<T>('/exams', params),
   
-  getById: (id: string) => apiService.get(`/exams/${id}`),
+  getById: <T>(id: string) => apiService.get<T>(`/exams/${id}`),
   
-  delete: (id: string) => apiService.delete(`/exams/${id}`)
+  delete: <T>(id: string) => apiService.delete<T>(`/exams/${id}`)
 };
 
 export const analysisApi = {
-  analyze: (examId: string) => apiService.post(`/analysis/analyze/${examId}`),
+  analyze: <T>(examId: string) => apiService.post<T>(`/analysis/analyze/${examId}`),
   
-  getResult: (examId: string) => apiService.get(`/analysis/result/${examId}`),
+  getResult: <T>(examId: string) => apiService.get<T>(`/analysis/result/${examId}`),
   
-  getReport: (examId: string) => apiService.get(`/analysis/report/${examId}`)
+  getReport: <T>(examId: string) => apiService.get<T>(`/analysis/report/${examId}`)
 };
 
 export const knowledgeApi = {

@@ -6,7 +6,9 @@
   "scripts": {
     "backend": "cd backend && npm run dev",
     "mobile": "cd mobile && npm start",
+    "mobile:web": "cd mobile && npm run web",
     "dev": "concurrently \"npm run backend\" \"npm run mobile\"",
+    "dev:web": "concurrently \"npm run backend\" \"npm run mobile:web\"",
     "install:all": "cd backend && npm install && cd ../mobile && npm install"
   },
   "devDependencies": {

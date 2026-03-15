@@ -1,38 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Pressable } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Pressable, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { COLORS } from '../constants';
+import PasswordInput from '../components/PasswordInput';
 
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Home: undefined;
-};
-
-type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
-
-interface Props {
-  navigation: LoginScreenNavigationProp;
-}
-
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, isLoading, error, isAuthenticated, clearError } = useAuthStore();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigation.replace('Home');
-    }
-  }, [isAuthenticated]);
+  const authStore = useAuthStore as any;
+  const login = authStore((state: any) => state.login);
+  const isLoading = authStore((state: any) => state.isLoading);
+  const error = authStore((state: any) => state.error);
+  const clearError = authStore((state: any) => state.clearError);
 
-  useEffect(() => {
-    if (error) {
-      Alert.alert('登录失败', error);
-      clearError();
-    }
-  }, [error]);
+  useEffect(() => () => clearError(), []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -41,125 +24,154 @@ export default function LoginScreen({ navigation }: Props) {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await response.json();
-      Alert.alert('测试', '状态: ' + response.status + '\n数据: ' + JSON.stringify(data));
-      
-      if (data.status === 'success' && data.data) {
-        await login(email, password);
-      }
-    } catch (err) {
-      Alert.alert('登录失败', (err as Error).message);
+      await login(email, password);
+    } catch (err: any) {
+      console.error('Login error:', err);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>AI教育</Text>
-      <Text style={styles.subtitle}>智能学习助手</Text>
-
-      <View style={styles.form}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.panel}>
+        <View style={styles.logo}>
+          <Ionicons name="school-outline" size={26} color={COLORS.primaryDeep} />
+        </View>
+        <Text style={styles.title}>登录</Text>
+        <Text style={styles.subtitle}>输入账号后直接进入首页。流程只保留必要步骤。</Text>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
         <TextInput
           style={styles.input}
           placeholder="邮箱"
+          placeholderTextColor={COLORS.textSecondary}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
-        <TextInput
-          style={styles.input}
+        <PasswordInput
           placeholder="密码"
+          placeholderTextColor={COLORS.textSecondary}
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
         />
 
-        <Pressable
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={() => {
-            console.log('Button pressed');
-            handleLogin();
-          }}
-          disabled={isLoading}
-        >
+        <Pressable style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleLogin} disabled={isLoading}>
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={COLORS.white} />
           ) : (
-            <Text style={styles.buttonText}>登录</Text>
+            <>
+              <Text style={styles.buttonText}>登录并进入</Text>
+              <Ionicons color={COLORS.white} name="arrow-forward" size={18} />
+            </>
           )}
         </Pressable>
 
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.navigate('Register')}
-        >
-          <Text style={styles.linkText}>没有账号？立即注册</Text>
+        <TouchableOpacity style={styles.linkButton} onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.linkText}>没有账号？创建一个新账号</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 20,
     backgroundColor: COLORS.background
   },
+  content: {
+    padding: 20,
+    paddingTop: 72,
+    paddingBottom: 32,
+    justifyContent: 'center',
+    flexGrow: 1
+  },
+  panel: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 28,
+    padding: 22,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 8
+  },
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18
+  },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: COLORS.primary,
+    fontSize: 30,
+    fontWeight: '800',
+    color: COLORS.text,
     marginBottom: 8
   },
   subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
+    fontSize: 14,
+    lineHeight: 20,
     color: COLORS.textSecondary,
-    marginBottom: 40
-  },
-  form: {
-    gap: 16
+    marginBottom: 18
   },
   input: {
-    height: 50,
+    minHeight: 56,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingHorizontal: 18,
     fontSize: 16,
-    backgroundColor: COLORS.surface
+    backgroundColor: COLORS.surfaceStrong,
+    color: COLORS.text
   },
   button: {
-    height: 50,
+    minHeight: 58,
     backgroundColor: COLORS.primary,
-    borderRadius: 8,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8
+    marginTop: 6,
+    flexDirection: 'row',
+    gap: 10
   },
   buttonDisabled: {
     opacity: 0.6
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.white,
     fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '800'
   },
   linkButton: {
     alignItems: 'center',
-    marginTop: 16
+    marginTop: 6
   },
   linkText: {
     color: COLORS.primary,
-    fontSize: 14
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  errorContainer: {
+    backgroundColor: '#FEE2E2',
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 14,
+    flex: 1
   }
 });

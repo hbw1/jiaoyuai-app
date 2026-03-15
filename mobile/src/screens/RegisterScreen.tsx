@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../stores/authStore';
 import { COLORS, GRADES } from '../constants';
+import PasswordInput from '../components/PasswordInput';
+import { getGradeLabel } from '../utils/ui';
 
 type RootStackParamList = {
   Login: undefined;
@@ -22,7 +25,14 @@ export default function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [grade, setGrade] = useState(1);
-  const { register, isLoading, error } = useAuthStore();
+
+  const authStore = useAuthStore as any;
+  const register = authStore((state: any) => state.register);
+  const isLoading = authStore((state: any) => state.isLoading);
+  const error = authStore((state: any) => state.error);
+  const clearError = authStore((state: any) => state.clearError);
+
+  useEffect(() => () => clearError(), []);
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
@@ -52,75 +62,69 @@ export default function RegisterScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>创建账号</Text>
+      <View style={styles.intro}>
+        <Text style={styles.eyebrow}>30 秒完成入门</Text>
+        <Text style={styles.title}>创建你的学习档案</Text>
+        <Text style={styles.subtitle}>先选年级，后续分析会更贴近真实试卷难度和知识点分布。</Text>
+      </View>
 
-      <View style={styles.form}>
+      <View style={styles.formCard}>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
         <TextInput
           style={styles.input}
           placeholder="姓名"
+          placeholderTextColor={COLORS.textSecondary}
           value={name}
           onChangeText={setName}
         />
         <TextInput
           style={styles.input}
           placeholder="邮箱"
+          placeholderTextColor={COLORS.textSecondary}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        <TextInput
-          style={styles.input}
+        <PasswordInput
           placeholder="密码（至少6位）"
+          placeholderTextColor={COLORS.textSecondary}
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
         />
-        <TextInput
-          style={styles.input}
+        <PasswordInput
           placeholder="确认密码"
+          placeholderTextColor={COLORS.textSecondary}
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry
         />
 
-        <Text style={styles.label}>选择年级</Text>
+        <View style={styles.gradeHeader}>
+          <Text style={styles.label}>选择年级</Text>
+          <Text style={styles.gradeHint}>{getGradeLabel(grade)}</Text>
+        </View>
         <View style={styles.gradeContainer}>
-          {GRADES.slice(0, 6).map((g) => (
+          {GRADES.slice(0, 9).map((item) => (
             <TouchableOpacity
-              key={g.value}
-              style={[
-                styles.gradeButton,
-                grade === g.value && styles.gradeButtonActive
-              ]}
-              onPress={() => setGrade(g.value)}
+              key={item.value}
+              style={[styles.gradeButton, grade === item.value && styles.gradeButtonActive]}
+              onPress={() => setGrade(item.value)}
             >
-              <Text
-                style={[
-                  styles.gradeText,
-                  grade === g.value && styles.gradeTextActive
-                ]}
-              >
-                {g.value}年级
-              </Text>
+              <Text style={[styles.gradeText, grade === item.value && styles.gradeTextActive]}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <TouchableOpacity
-          style={[styles.button, isLoading && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={isLoading}
-        >
-          <Text style={styles.buttonText}>
-            {isLoading ? '注册中...' : '注册'}
-          </Text>
+        <TouchableOpacity style={[styles.button, isLoading && styles.buttonDisabled]} onPress={handleRegister} disabled={isLoading}>
+          {isLoading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>创建账号并进入首页</Text>}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.linkButton} onPress={() => navigation.goBack()}>
           <Text style={styles.linkText}>已有账号？立即登录</Text>
         </TouchableOpacity>
       </View>
@@ -135,79 +139,131 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60
+    paddingTop: 28,
+    paddingBottom: 32
+  },
+  intro: {
+    marginBottom: 18
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: COLORS.primaryDeep,
+    marginBottom: 10,
+    textTransform: 'uppercase'
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: COLORS.primary,
-    marginBottom: 32
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 10
   },
-  form: {
-    gap: 16
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.textSecondary
+  },
+  formCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 28,
+    padding: 20,
+    gap: 14,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 6
   },
   input: {
-    height: 50,
+    minHeight: 56,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderRadius: 18,
+    paddingHorizontal: 18,
     fontSize: 16,
-    backgroundColor: COLORS.surface
+    backgroundColor: COLORS.surfaceStrong,
+    color: COLORS.text
   },
   label: {
     fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '700'
+  },
+  gradeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4
+  },
+  gradeHint: {
     color: COLORS.textSecondary,
-    marginTop: 8
+    fontSize: 13
   },
   gradeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8
+    gap: 10
   },
   gradeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.surface
+    backgroundColor: COLORS.surfaceStrong
   },
   gradeButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary
   },
   gradeText: {
-    fontSize: 14,
-    color: COLORS.text
-  },
-  gradeTextActive: {
-    color: '#fff',
+    fontSize: 13,
+    color: COLORS.text,
     fontWeight: '600'
   },
+  gradeTextActive: {
+    color: COLORS.white,
+    fontWeight: '700'
+  },
   button: {
-    height: 50,
+    minHeight: 58,
     backgroundColor: COLORS.primary,
-    borderRadius: 8,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16
+    marginTop: 10
   },
   buttonDisabled: {
     opacity: 0.6
   },
   buttonText: {
-    color: '#fff',
+    color: COLORS.white,
     fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '800'
   },
   linkButton: {
     alignItems: 'center',
-    marginTop: 16
+    marginTop: 6
   },
   linkText: {
     color: COLORS.primary,
-    fontSize: 14
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  errorContainer: {
+    backgroundColor: '#F7DDD8',
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 14,
+    flex: 1
   }
 });
